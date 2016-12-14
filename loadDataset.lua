@@ -12,7 +12,7 @@ classes_names = {'hand','nonhand'}
 
 w    = 32
 h    = 32
-trainToAllRatio = 0.8
+trainToAllRatio = 0.9
 
 posFolder = 'hand_dataset/training_dataset/pos/'
 negFolder = 'hand_dataset/training_dataset/neg/'
@@ -20,19 +20,23 @@ negFolder = 'hand_dataset/training_dataset/neg/'
 
 function shuffle(array)
     local counter = #array
+    print(counter)
     function swap(array, index1, index2)  array[index1], array[index2] = array[index2], array[index1] end
 
     while counter > 1 do
-        local index = torch.random(counter)
-        swap(array, index, counter)
-        counter = counter - 1
+        local index1 = torch.random(#array)
+        local index2 = torch.random(#array)
+
+        swap(array, index1, index2)
+        counter = counter - 0.1
     end
 end
 
 
 function load_data_from_disk()
 	local dataset={}
-	local  trainset, testset = {},{}
+	local trainset, testset = {},{}
+
 	--local labels = torch.Tensor(nNegAndPos,1):zero()
 	local groupSize   = torch.Tensor{    2865         ,    2865     }
 	local groupClass  = torch.Tensor{    hand         ,  nonhand    }
@@ -71,25 +75,45 @@ function load_data_from_disk()
 	nTrain = trainToAllRatio * datasetLength
 	nTest  = datasetLength   - nTrain
 	
+    local trainsetTensor =  torch.Tensor(nTrain,1,h,w):zero() --tensor version of train set
+
 	for i = 1,nTrain do
 		trainset[i] = dataset[i]
+		trainsetTensor[i] = dataset[i][1]
 	end
+
+    DataMean = trainsetTensor[{ {}, {}, {}, {}  }]:mean() -- mean estimation
+    DataStd  = trainsetTensor[{ {}, {}, {}, {}  }]:std() -- std estimation
+    eps = 1e-10
+
 
 	j=0;
 	for i = 1,nTest do
 		testset[i]  = dataset[nTrain+i]
 		if testset[i][2] == 1 then		j=j+1 end
 	end
+
+	-------------------------------------------- Normalization
+	for i = 1,nTrain do
+		trainset[i][1] = (trainset[i][1] - DataMean)/(DataStd+eps)
+	end
+
+	for i = 1,nTest do
+		testset[i][1] = (testset[i][1] - DataMean)/(DataStd+eps)
+	end
+	--------------------------------------------
+
+
 	print(j,'/',nTest)
 
 	function trainset:size()  return nTrain end
 	function testset:size()   return nTest end
 
-	return trainset, testset 
+	return trainset, testset , DataMean, DataStd
 end
 
 
 
-local  trainset, testset = load_data_from_disk()
+local  trainset, testset, DataMean, DataStd = load_data_from_disk()
 
-return trainset, testset, classes, classes_names
+return trainset, testset, classes, classes_names, DataMean, DataStd

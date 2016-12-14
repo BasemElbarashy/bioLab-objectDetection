@@ -32,15 +32,15 @@ function predict(network,input,confidence)
 
          local responses_per_class     = network:forward(inp) 
          local probabilites_per_class  = torch.exp(responses_per_class)
-         local probability, prediction = torch.max(probabilites_per_class, 1)
-   
+         local probability, prediction = torch.max(probabilites_per_class, 2)
+
          --output =  prediction[1];
          output = 1;
-         if probabilites_per_class[1]<confidence then
+         if probabilites_per_class[1][1]<confidence then
           output =2;
          end
          
-         return output,probabilites_per_class[1]
+         return output,probabilites_per_class[1][1]
 end
 
 
